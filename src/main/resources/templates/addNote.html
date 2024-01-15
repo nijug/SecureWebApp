@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <link rel="stylesheet" type="text/css" th:href="@{/css/styles.css}">
+    <title>Add Note</title>
+</head>
+<body>
+<h1>Add Note</h1>
+<form action="#" th:action="@{/notes/add}" method="post">
+    <input type="hidden" name="csrfToken" th:value="${session.csrfToken}"/>
+    <label>
+        <textarea name="content" required></textarea>
+    </label>
+    <label>
+        <input type="password" name="secretPassword" placeholder="Secret Password (optional)">
+    </label>
+    <label>
+        <input type="text" name="username" placeholder="Username to share with (optional)">
+    </label>
+    <input type="checkbox" id="sharePublicly" name="sharePublicly">
+    <label for="sharePublicly">Share Publicly</label>
+    <input type="submit" value="Add Note">
+</form>
+
+<p th:text="${error}"></p>
+</body>
+</html>

@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Your Credentials</title>
+</head>
+<body>
+<h1>Welcome!</h1>
+<p>Your TOTP secret key is: <span th:text="${totpSecret}"></span></p>
+<p>Please scan the following QR code with your TOTP app:</p>
+<img th:src="@{/qrCode.png}" alt="QR Code">
+<p>Your recovery keys are:</p>
+<ul th:each="key : ${recoveryKeys}">
+    <li th:text="${key}"></li>
+</ul>
+</body>
+</html>

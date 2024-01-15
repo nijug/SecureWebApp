@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <link rel="stylesheet" type="text/css" th:href="@{/css/styles.css}">
+
+    <title>Decrypted Note</title>
+</head>
+<body>
+<h1>Decrypted Note</h1>
+<p th:utext="${decryptedNote}"></p>
+<a th:href="@{/home}">Back to Home</a>
+</body>
+</html>

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <link rel="stylesheet" type="text/css" th:href="@{/css/styles.css}">
+  <title>Home</title>
+</head>
+<body>
+<h1>Welcome to your notes application!</h1>
+
+<h2>Your Notes</h2>
+<div th:each="note : ${myNotes}" class="note">
+  <div th:if="${note.id == decryptedNoteId}">
+    <p th:utext="${decryptedNote}"></p>
+  </div>
+  <div th:if="${note.id != decryptedNoteId}">
+    <p th:if="${!note.isEncrypted}" th:utext="${note.content}"></p>
+    <div th:if="${note.isEncrypted}">
+      <p>This note is encrypted. Please enter the secret password to view it:</p>
+      <form action="#" th:action="@{/home}" method="post">
+        <input type="hidden" name="csrfToken" th:value="${session.csrfToken}"/>
+        <input type="hidden" name="noteId" th:value="${note.id}">
+        <input type="password" name="secretPassword" required>
+        <input type="submit" value="View Note">
+      </form>
+    </div>
+  </div>
+</div>
+
+<h2>Notes Shared With You</h2>
+<div th:each="note : ${sharedNotes}" class="note">
+  <p th:utext="${note.content}"></p>
+  <p th:if="${note.isEncrypted}">This note is encrypted and cannot be shared.</p>
+</div>
+
+<h3>Public Notes</h3>
+<div th:each="note : ${publicNotes}" class="note">
+  <p th:utext="${note.content}"></p>
+</div>
+<a th:href="@{/notes/add}">Add Note</a>
+</body>
+</html>
