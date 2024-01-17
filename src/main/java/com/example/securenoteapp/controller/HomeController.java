@@ -4,6 +4,9 @@ import com.example.securenoteapp.service.CsrfTokenService;
 import com.example.securenoteapp.service.NoteService;
 import com.example.securenoteapp.model.data.Note;
 import com.example.securenoteapp.model.data.User;
+import com.example.securenoteapp.service.QRCodeService;
+import com.google.zxing.WriterException;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,6 +14,8 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
+import java.util.Base64;
 import java.util.List;
 @Controller
 @RequestMapping("/home")
@@ -20,17 +25,19 @@ public class HomeController {
 
     private final CsrfTokenService csrfTokenService;
 
+    private final QRCodeService qrCodeService;
+
     @Autowired
-    public HomeController(NoteService noteService, CsrfTokenService csrfTokenService) {
+    public HomeController(NoteService noteService, CsrfTokenService csrfTokenService, QRCodeService qrCodeService) {
         this.noteService = noteService;
         this.csrfTokenService = csrfTokenService;
+        this.qrCodeService = qrCodeService;
     }
 
 
     @GetMapping
     public String homePage(HttpSession session, Model model, HttpServletResponse response) throws InterruptedException {
         Thread.sleep(500);
-        System.out.println("Home page requested...");
         response.addHeader("Content-Security-Policy", "script-src 'self'");
         response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
         response.setDateHeader("Expires", 0);
@@ -85,5 +92,25 @@ public class HomeController {
         }
         return "note";
     }
+
+    @GetMapping("/credintials")
+    public String showCredentials(Model model, HttpServletResponse response, HttpSession session, HttpServletRequest request) throws IOException, WriterException {
+        response.addHeader("Content-Security-Policy", "script-src 'self'");
+        if (session.getAttribute("user") == null) {
+            return "redirect:/users/login";
+        }
+        User user = (User) session.getAttribute("user");
+        String qrCodeData = "otpauth://totp/" + user.getUsername() + "?secret=" + user.getTotpSecret() + "&issuer=YourAppName";
+
+        byte[] qrCode = qrCodeService.generateQRCodeImage(qrCodeData, 200, 200);
+        String qrCodeBase64 = Base64.getEncoder().encodeToString(qrCode);
+        model.addAttribute("httpServletRequest", request);
+        model.addAttribute("qrCode", qrCodeBase64);
+        model.addAttribute("totpSecret", user.getTotpSecret());
+        model.addAttribute("recoveryKeys", user.getRecoveryKeys());
+
+        return "showCredintials";
+    }
+
 
 }

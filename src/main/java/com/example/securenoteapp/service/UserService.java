@@ -4,6 +4,8 @@ package com.example.securenoteapp.service;
 import com.example.securenoteapp.model.data.PasswordResetToken;
 import com.example.securenoteapp.model.data.User;
 import com.example.securenoteapp.model.repository.UserRepository;
+import com.google.zxing.WriterException;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -13,10 +15,8 @@ import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validator;
 import org.springframework.ui.Model;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-import java.util.Set;
+import java.io.IOException;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,6 +25,8 @@ public class UserService {
     private final  Argon2PasswordEncoder passwordEncoder;
 
     private final HashService hashService;
+
+    private final TotpService totpService;
 
     private final PasswordResetTokenService passTokenService;
 
@@ -35,14 +37,15 @@ public class UserService {
 
 
     @Autowired
-    public UserService(UserRepository userRepository, Validator validator, PasswordResetTokenService passTokenService, HashService hashService) {
+    public UserService(UserRepository userRepository, Validator validator, PasswordResetTokenService passTokenService, HashService hashService, TotpService totpService) {
         this.userRepository = userRepository;
         this.passTokenService = passTokenService;
+        this.totpService = totpService;
         this.passwordEncoder = new Argon2PasswordEncoder(16, 32, 1, 7168, 5);
         this.hashService = hashService;
         this.validator = validator;
     }
-    public void register(User user, Model model) throws InterruptedException {
+    public void register(User user) throws InterruptedException{
         Thread.sleep(500);
         Set<ConstraintViolation<User>> violations = validator.validate(user);
         if (!violations.isEmpty()) {
@@ -61,6 +64,11 @@ public class UserService {
         }
 
         user.setPassword(passwordEncoder.encode(user.getPassword()));
+        String secretKey = totpService.generateSecretKey();
+        user.setTotpSecret(secretKey);
+
+        List<String> recoveryKeys = generateRecoveryKeys();
+        storeRecoveryKeys(user, recoveryKeys);
         userRepository.save(user);
     }
 
@@ -80,15 +88,13 @@ public class UserService {
         }
     }
 
-
-
-    public User login(User userFromRequest) throws InterruptedException{
+    public User login(User userFromRequest, String totpOrRecoveryKey, HttpSession session) throws InterruptedException{
         Thread.sleep(500);
+
         User userInDB = userRepository.findByUsername(userFromRequest.getUsername());
         if (userInDB == null) {
             throw new IllegalArgumentException("Invalid username/password");
         }
-
         if (userInDB.getFailedAttempts() >= MAX_ATTEMPTS) {
             if (System.currentTimeMillis() - userInDB.getLockTime() < LOCK_TIME) {
                 throw new IllegalArgumentException("Account is locked. Please try again later.");
@@ -104,6 +110,28 @@ public class UserService {
             }
             userRepository.save(userInDB);
             throw new IllegalArgumentException("Invalid username/password");
+        }
+
+        if (isRecoveryKeyValid(userInDB, totpOrRecoveryKey)) {
+            invalidateRecoveryKey(userInDB, totpOrRecoveryKey);
+        } else if (userInDB.getTotpSecret() != null) {
+            try {
+                if (!totpService.validateTotp(userInDB.getTotpSecret(), totpOrRecoveryKey, session)) {
+                    userInDB.setFailedAttempts(userInDB.getFailedAttempts() + 1);
+                    if (userInDB.getFailedAttempts() >= MAX_ATTEMPTS) {
+                        userInDB.setLockTime(System.currentTimeMillis());
+                    }
+                    userRepository.save(userInDB);
+                    throw new IllegalArgumentException("Invalid TOTP.");
+                }
+            } catch (NumberFormatException e) {
+                userInDB.setFailedAttempts(userInDB.getFailedAttempts() + 1);
+                if (userInDB.getFailedAttempts() >= MAX_ATTEMPTS) {
+                    userInDB.setLockTime(System.currentTimeMillis());
+                }
+                userRepository.save(userInDB);
+                throw new IllegalArgumentException("Invalid TOTP.");
+            }
         }
 
         userInDB.setFailedAttempts(0);
@@ -155,21 +183,23 @@ public class UserService {
 
     public void storeRecoveryKeys(User user, List<String> recoveryKeys) {
         List<String> hashedKeys = recoveryKeys.stream()
-                .map(key -> hashService.hash(key))
+                .map(hashService::hash)
                 .collect(Collectors.toList());
-        user.setRecoveryKeys((Set<String>) hashedKeys);
+
+        user.setRecoveryKeys(new HashSet<>(hashedKeys));
         userRepository.save(user);
+
     }
 
     public boolean isRecoveryKeyValid(User user, String recoveryKey) {
-        String hashedKey = hashService.hash(recoveryKey);
-        return user.getRecoveryKeys().contains(hashedKey);
+        return user.getRecoveryKeys().contains(recoveryKey);
     }
 
     public void invalidateRecoveryKey(User user, String recoveryKey) {
-        user.getRecoveryKeys().remove(hashService.hash(recoveryKey));
+        user.getRecoveryKeys().remove(recoveryKey);
         userRepository.save(user);
     }
+
 }
 
 

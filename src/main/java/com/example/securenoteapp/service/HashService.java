@@ -13,10 +13,8 @@ public class HashService {
             byte[] hash = md.digest(input.getBytes(StandardCharsets.UTF_8));
             BigInteger number = new BigInteger(1, hash);
             StringBuilder hexString = new StringBuilder(number.toString(16));
-            while (hexString.length() < 32) {
-                hexString.insert(0, '0');
-            }
-            return hexString.toString();
+            String result = hexString.toString();
+            return result.substring(0, Math.min(result.length(), 6));
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
         }

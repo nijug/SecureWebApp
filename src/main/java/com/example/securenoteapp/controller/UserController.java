@@ -2,7 +2,10 @@ package com.example.securenoteapp.controller;
 
 import com.example.securenoteapp.model.data.User;
 import com.example.securenoteapp.service.CsrfTokenService;
+import com.example.securenoteapp.service.QRCodeService;
 import com.example.securenoteapp.service.UserService;
+import com.google.zxing.WriterException;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.ConstraintViolationException;
@@ -10,6 +13,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+
+import java.io.IOException;
+import java.util.Base64;
 
 @Controller
 @RequestMapping("/users")
@@ -19,8 +25,11 @@ public class UserController {
 
     private final CsrfTokenService csrfTokenService;
 
+    private final QRCodeService qrCodeService;
+
     @Autowired
-    public UserController(UserService userService, CsrfTokenService csrfTokenService) {
+    public UserController(UserService userService, CsrfTokenService csrfTokenService, QRCodeService qrCodeService) {
+        this.qrCodeService = qrCodeService;
         this.userService = userService;
         this.csrfTokenService = csrfTokenService;
     }
@@ -31,10 +40,11 @@ public class UserController {
         return "login";
     }
 
+
     @PostMapping("/login")
-    public String login(@ModelAttribute("user") User user, Model model, HttpSession session) {
+    public String login(@ModelAttribute("user") User user, @RequestParam("totp") String totp, Model model, HttpSession session) {
         try {
-            User loggedInUser = userService.login(user);
+            User loggedInUser = userService.login(user, totp,session);
             session.setAttribute("user", loggedInUser);
             return "redirect:/home";
         } catch (InterruptedException e) {
@@ -44,8 +54,7 @@ public class UserController {
             model.addAttribute("error", e.getMessage());
             return "login";
         }
-}
-
+    }
     @GetMapping("/register")
     public String registerPage(Model model, HttpServletResponse response) {
         response.addHeader("Content-Security-Policy", "script-src 'self'");
@@ -54,10 +63,11 @@ public class UserController {
     }
 
     @PostMapping("/register")
-    public String register(@ModelAttribute("user") User user, Model model) {
+    public String register(@ModelAttribute("user") User user, Model model,HttpSession session) {
         try {
-            userService.register(user, model);
-            return "redirect:/users/login";
+            userService.register(user);
+            session.setAttribute("user", user);
+            return "redirect:/users/credintials";
         } catch (IllegalArgumentException | ConstraintViolationException e) {
             model.addAttribute("error", e.getMessage());
             return "register";
@@ -69,7 +79,7 @@ public class UserController {
     }
 
     @GetMapping("/forgotPassword")
-    public String showForgotPasswordForm(HttpSession session, HttpServletResponse response, Model model) {
+    public String showForgotPasswordForm(HttpSession session, HttpServletResponse response) {
         response.addHeader("Content-Security-Policy", "script-src 'self'");
         csrfTokenService.generateAndStoreToken(session);
         return "forgotPassword";
@@ -115,6 +125,24 @@ public class UserController {
         return "resetPassword";
     }
 
+    @GetMapping("/credintials")
+    public String showCredentials(Model model, HttpServletResponse response, HttpSession session, HttpServletRequest request) throws IOException, WriterException {
+        response.addHeader("Content-Security-Policy", "script-src 'self'");
+        User user = (User) session.getAttribute("user");
+        String qrCodeData = "otpauth://totp/" + user.getUsername() + "?secret=" + user.getTotpSecret() + "&issuer=YourAppName";
+
+        byte[] qrCode = qrCodeService.generateQRCodeImage(qrCodeData, 200, 200);
+        String qrCodeBase64 = Base64.getEncoder().encodeToString(qrCode);
+
+        model.addAttribute("httpServletRequest", request);
+        model.addAttribute("qrCode", qrCodeBase64);
+        model.addAttribute("totpSecret", user.getTotpSecret());
+        model.addAttribute("recoveryKeys", user.getRecoveryKeys());
+        session.removeAttribute("user");
+
+
+        return "showCredintials";
+    }
 }
 
 

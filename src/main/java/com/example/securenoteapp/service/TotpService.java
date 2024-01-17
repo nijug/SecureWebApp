@@ -1,4 +1,5 @@
 package com.example.securenoteapp.service;
+import jakarta.servlet.http.HttpSession;
 import org.jboss.aerogear.security.otp.Totp;
 import org.jboss.aerogear.security.otp.api.Base32;
 import org.springframework.stereotype.Service;
@@ -14,9 +15,22 @@ public class TotpService {
         Totp totp = new Totp(secretKey);
         return totp.now();
     }
+    public boolean validateTotp(String secretKey, String totp, HttpSession session) {
+        String lastUsedTotp = (String) session.getAttribute("lastUsedTotp");
+        Long lastUsedTotpTime = (Long) session.getAttribute("lastUsedTotpTime");
 
-    public boolean validateTotp(String secretKey, String totp) {
+        if (totp.equals(lastUsedTotp) && System.currentTimeMillis() - lastUsedTotpTime < 30000) {
+            return false;
+        }
+
         Totp totpGenerator = new Totp(secretKey);
-        return totpGenerator.verify(totp);
+        boolean valid = totpGenerator.verify(totp);
+
+        if (valid) {
+            session.setAttribute("lastUsedTotp", totp);
+            session.setAttribute("lastUsedTotpTime", System.currentTimeMillis());
+        }
+
+        return valid;
     }
 }

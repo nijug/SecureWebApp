@@ -7,10 +7,11 @@
 <h1>Welcome!</h1>
 <p>Your TOTP secret key is: <span th:text="${totpSecret}"></span></p>
 <p>Please scan the following QR code with your TOTP app:</p>
-<img th:src="@{/qrCode.png}" alt="QR Code">
+<img th:src="'data:image/png;base64,'+${qrCode}" alt="QR Code">
 <p>Your recovery keys are:</p>
 <ul th:each="key : ${recoveryKeys}">
     <li th:text="${key}"></li>
 </ul>
+<a th:href="${httpServletRequest.requestURI.contains('/users/showCredentials') ? '/login' : '/home'}">Go back</a>
 </body>
 </html>

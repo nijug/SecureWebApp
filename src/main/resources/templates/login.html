@@ -2,7 +2,6 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <link rel="stylesheet" type="text/css" th:href="@{/css/styles.css}">
-
     <title>Login</title>
 </head>
 <body>
@@ -12,6 +11,8 @@
     <input type="text" id="username" name="username" required><br>
     <label for="password">Password:</label><br>
     <input type="password" id="password" name="password" required><br>
+    <label for="totp">TOTP:</label><br>
+    <input type="text" id="totp" name="totp" required><br>
     <p th:if="${error}" th:text="${error}" style="color: red;"></p>
     <input type="submit" value="Login">
 </form>

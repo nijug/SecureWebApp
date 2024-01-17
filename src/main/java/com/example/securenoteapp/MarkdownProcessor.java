@@ -17,7 +17,7 @@ public class MarkdownProcessor {
         renderer = HtmlRenderer.builder(options).build();
 
         sanitizer = new HtmlPolicyBuilder()
-                .allowElements("b", "i", "h1", "h2", "h3", "h4", "h5", "img", "a")
+                .allowElements("b", "i", "strong", "em", "h1", "h2", "h3", "h4", "h5", "img", "a")
                 .allowAttributes("src").onElements("img")
                 .allowAttributes("href").onElements("a")
                 .allowStandardUrlProtocols()

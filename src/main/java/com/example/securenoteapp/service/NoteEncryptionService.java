@@ -26,7 +26,6 @@ public class NoteEncryptionService {
     }
 
     public String encrypt(String content, String secretPassword) throws Exception {
-        // Generate a random salt
         SecureRandom secureRandom = new SecureRandom();
         byte[] salt = new byte[SALT_SIZE];
         secureRandom.nextBytes(salt);
