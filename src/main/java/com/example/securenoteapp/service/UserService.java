@@ -99,6 +99,7 @@ public class UserService {
             if (System.currentTimeMillis() - userInDB.getLockTime() < LOCK_TIME) {
                 throw new IllegalArgumentException("Account is locked. Please try again later.");
             } else {
+                // todo: failed attempts should be per ip address
                 userInDB.setFailedAttempts(0);
             }
         }

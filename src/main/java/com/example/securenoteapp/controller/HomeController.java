@@ -38,9 +38,7 @@ public class HomeController {
     @GetMapping
     public String homePage(HttpSession session, Model model, HttpServletResponse response) throws InterruptedException {
         Thread.sleep(500);
-        response.addHeader("Content-Security-Policy", "script-src 'self'");
-        response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-        response.setDateHeader("Expires", 0);
+
         User user = (User) session.getAttribute("user");  // get the user object from the session
         csrfTokenService.generateAndStoreToken(session);
         if (user != null) {
@@ -69,6 +67,7 @@ public class HomeController {
             Note note = noteService.getNoteById(noteId);
             if (note != null && note.isEncrypted()) {
                 try {
+                    // TODO: notatka powinna byc szyfrowana i odszyfrowywana na frontendzie
                     String content = noteService.readNote(note, secretPassword);
                     session.setAttribute("decryptedNote", content);
                     return "redirect:/home/note/" + noteId;
@@ -95,15 +94,15 @@ public class HomeController {
 
     @GetMapping("/credintials")
     public String showCredentials(Model model, HttpServletResponse response, HttpSession session, HttpServletRequest request) throws IOException, WriterException {
-        response.addHeader("Content-Security-Policy", "script-src 'self'");
         if (session.getAttribute("user") == null) {
             return "redirect:/users/login";
         }
         User user = (User) session.getAttribute("user");
-        String qrCodeData = "otpauth://totp/" + user.getUsername() + "?secret=" + user.getTotpSecret() + "&issuer=YourAppName";
+        String qrCodeData = "otpauth://totp/" + user.getUsername() + "?secret=" + user.getTotpSecret() + "&issuer=SecureNoteApp";
 
         byte[] qrCode = qrCodeService.generateQRCodeImage(qrCodeData, 200, 200);
         String qrCodeBase64 = Base64.getEncoder().encodeToString(qrCode);
+        // todo: nie wysylac calego requesta do frontendu, wysylac tylko url do redirecta
         model.addAttribute("httpServletRequest", request);
         model.addAttribute("qrCode", qrCodeBase64);
         model.addAttribute("totpSecret", user.getTotpSecret());
@@ -112,5 +111,10 @@ public class HomeController {
         return "showCredintials";
     }
 
+    @GetMapping("/logout")
+    public String logout(HttpSession session) {
+        session.invalidate();
+        return "redirect:/users/login";
+    }
 
 }

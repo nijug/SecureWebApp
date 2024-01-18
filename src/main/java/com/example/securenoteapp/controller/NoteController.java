@@ -57,7 +57,7 @@ public class NoteController {
         if (!csrfTokenService.isTokenValid(session, csrfToken)) {
             throw new IllegalArgumentException("CSRF token does not match.");
         }
-        csrfTokenService.generateAndStoreToken(session);
+
 
         if (secretPassword != null && !secretPassword.isEmpty() && (username != null && !username.isEmpty() || (sharePublicly != null && sharePublicly))) {
             model.addAttribute("error", "Encrypted notes cannot be shared.");
@@ -101,9 +101,9 @@ public class NoteController {
 
 
     @GetMapping("/add")
-    public String addNotePage(HttpServletResponse response) throws InterruptedException {
-        response.addHeader("Content-Security-Policy", "script-src 'self'");
+    public String addNotePage(HttpServletResponse response,  HttpSession session) throws InterruptedException {
         Thread.sleep(500);
+        csrfTokenService.generateAndStoreToken(session);
         return "addNote";
     }
 

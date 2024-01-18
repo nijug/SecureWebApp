@@ -27,6 +27,7 @@ public class TotpService {
         boolean valid = totpGenerator.verify(totp);
 
         if (valid) {
+            // TODO: nie ma potrzeby blokowania totp po uzyciu
             session.setAttribute("lastUsedTotp", totp);
             session.setAttribute("lastUsedTotpTime", System.currentTimeMillis());
         }

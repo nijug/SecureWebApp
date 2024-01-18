@@ -35,16 +35,24 @@ public class UserController {
     }
 
     @GetMapping({"/", "/login"})
-    public String loginPage(Model model) {
+    public String loginPage(Model model,HttpSession session) {
+        if (session.getAttribute("user") != null) {
+            return "redirect:/home";
+        }
+        csrfTokenService.generateAndStoreToken(session);
         model.addAttribute("user", new User());
         return "login";
     }
 
 
     @PostMapping("/login")
-    public String login(@ModelAttribute("user") User user, @RequestParam("totp") String totp, Model model, HttpSession session) {
+    public String login(@ModelAttribute("user") User user, @RequestParam("totp") String totp,@RequestParam String csrfToken ,Model model, HttpSession session) {
         try {
+            if (!csrfTokenService.isTokenValid(session, csrfToken)) {
+                throw new IllegalArgumentException("CSRF token does not match.");
+            }
             User loggedInUser = userService.login(user, totp,session);
+            // TODO: nie zapisywac calego obiektu usera w sesji, zamiast tego zapisywać samo id
             session.setAttribute("user", loggedInUser);
             return "redirect:/home";
         } catch (InterruptedException e) {
@@ -56,17 +64,22 @@ public class UserController {
         }
     }
     @GetMapping("/register")
-    public String registerPage(Model model, HttpServletResponse response) {
-        response.addHeader("Content-Security-Policy", "script-src 'self'");
+    public String registerPage(Model model, HttpSession session) {
+        // TODO: CSP powinien byc na cala strone a nie na tylko jednego page
         model.addAttribute("user", new User());
+        csrfTokenService.generateAndStoreToken(session);
         return "register";
     }
 
     @PostMapping("/register")
-    public String register(@ModelAttribute("user") User user, Model model,HttpSession session) {
+    public String register(@ModelAttribute("user") User user,@RequestParam String csrfToken, Model model,HttpSession session) {
         try {
+
             userService.register(user);
             session.setAttribute("user", user);
+            if (!csrfTokenService.isTokenValid(session, csrfToken)) {
+                throw new IllegalArgumentException("CSRF token does not match.");
+            }
             return "redirect:/users/credintials";
         } catch (IllegalArgumentException | ConstraintViolationException e) {
             model.addAttribute("error", e.getMessage());
@@ -80,7 +93,7 @@ public class UserController {
 
     @GetMapping("/forgotPassword")
     public String showForgotPasswordForm(HttpSession session, HttpServletResponse response) {
-        response.addHeader("Content-Security-Policy", "script-src 'self'");
+        // TODO: csrf na cala strone a nie na jeden route
         csrfTokenService.generateAndStoreToken(session);
         return "forgotPassword";
     }
@@ -91,7 +104,7 @@ public class UserController {
                 throw new IllegalArgumentException("CSRF token does not match.");
             }
         try {
-            String response = "http://localhost:8080/users/resetPassword?token=" + userService.forgotPassword(username);
+            String response = "http://localhost/users/resetPassword?token=" + userService.forgotPassword(username);
             System.out.println("Reset link: " + response);
             model.addAttribute("message", response);
         } catch (IllegalArgumentException e) {
@@ -103,7 +116,8 @@ public class UserController {
     }
 
     @GetMapping("/resetPassword")
-    public String showResetPasswordForm(@RequestParam String token, Model model, HttpServletResponse response) {
+    public String showResetPasswordForm(@RequestParam String token, Model model, HttpServletResponse response, HttpSession session) {
+        csrfTokenService.generateAndStoreToken(session);
         response.addHeader("Content-Security-Policy", "script-src 'self'");
         model.addAttribute("token", token);
         return "resetPassword";
@@ -127,7 +141,6 @@ public class UserController {
 
     @GetMapping("/credintials")
     public String showCredentials(Model model, HttpServletResponse response, HttpSession session, HttpServletRequest request) throws IOException, WriterException {
-        response.addHeader("Content-Security-Policy", "script-src 'self'");
         User user = (User) session.getAttribute("user");
         String qrCodeData = "otpauth://totp/" + user.getUsername() + "?secret=" + user.getTotpSecret() + "&issuer=YourAppName";
 

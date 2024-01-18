@@ -8,6 +8,7 @@
 <h2>Login</h2>
 <form th:action="@{/users/login}" method="post">
     <label for="username">Username:</label><br>
+    <input type="hidden" name="csrfToken" th:value="${session.csrfToken}"/>
     <input type="text" id="username" name="username" required><br>
     <label for="password">Password:</label><br>
     <input type="password" id="password" name="password" required><br>

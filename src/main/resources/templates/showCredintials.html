@@ -13,5 +13,6 @@
     <li th:text="${key}"></li>
 </ul>
 <a th:href="${httpServletRequest.requestURI.contains('/users/showCredentials') ? '/login' : '/home'}">Go back</a>
+<!--TODO: Add a TOTP input-->
 </body>
 </html>

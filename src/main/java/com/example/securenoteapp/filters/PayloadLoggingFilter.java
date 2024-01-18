@@ -1,4 +1,4 @@
-package com.example.securenoteapp.controller;
+package com.example.securenoteapp.filters;
 
 import com.example.securenoteapp.model.data.UserAgentInfo;
 import com.example.securenoteapp.model.repository.UserAgentInfoRepository;
@@ -12,7 +12,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 
-@Order(1)
+@Order(2)
 @Component
 public class PayloadLoggingFilter implements Filter {
 

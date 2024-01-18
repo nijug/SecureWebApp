@@ -36,5 +36,20 @@ public class UserAgentInfo {
         this.timestamp = timestamp;
     }
 
+    @Override
+    public String toString() {
+        return "UserAgentInfo{" +
+                "id=" + id +
+                ", userAgent='" + userAgent + '\'' +
+                ", ip='" + ip + '\'' +
+                ", method='" + method + '\'' +
+                ", url='" + url + '\'' +
+                ", payload='" + payload + '\'' +
+                ", referrer='" + referrer + '\'' +
+                ", sessionId='" + sessionId + '\'' +
+                ", timestamp=" + timestamp +
+                '}';
+    }
+
     // getters and setters...
 }
